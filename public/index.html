@@ -263,6 +263,9 @@
                     <div>
                         <label class="text-[8px] text-gray-400 block mb-1">PRIZE WALLET (0x...)</label>
                         <input type="text" id="walletInput" placeholder="0x..." class="pixel-input">
+                        <div id="walletTooltip" class="hidden text-[8px] text-retro-yellow mt-1 animate-pulse">
+                            <i class="fas fa-exclamation-circle"></i> ADDRESS REQUIRED FOR PRIZES
+                        </div>
                     </div>
 
                     <button id="btnSubmit" class="pixel-btn w-full mt-2">
@@ -490,7 +493,7 @@
                 document.getElementById('submitContainer').classList.remove('hidden');
                 document.getElementById('postSubmitActions').classList.add('hidden');
                 document.getElementById('btnSubmit').disabled = false;
-                document.getElementById('btnSubmit').innerText = "SUBMIT RECORD";
+                document.getElementById('btnSubmit').innerText = sleighGame.active ? "SUBMIT DASH RECORD" : "SUBMIT CATCH RECORD";
 
                 document.getElementById('playerNameInput').value = localStorage.getItem('player_name') || '';
                 document.getElementById('walletInput').value = localStorage.getItem('player_wallet') || '';
@@ -790,6 +793,24 @@
         }
         gameLoop();
 
+        const API_BASE = '/api/leaderboard';
+
+        async function submitScore(data) {
+            const response = await fetch(`${API_BASE}/submit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) throw new Error('Submission failed');
+            return response.json();
+        }
+
+        async function fetchLeaderboard(gameType) {
+            const response = await fetch(`${API_BASE}/${gameType}`);
+            if (!response.ok) throw new Error('Fetch failed');
+            return response.json();
+        }
+
         window.lb = {
             currentTab: 'overall',
             switchTab: (tab) => {
@@ -801,17 +822,11 @@
                 const list = document.getElementById('lbList');
                 list.innerHTML = '<div class="text-center text-[10px] py-4">LOADING...</div>';
                 try {
-                    const response = await fetch('/api/leaderboard/' + window.lb.currentTab);
-                    if (!response.ok) throw new Error('Fetch failed');
-
-                    const data = await response.json();
-                    // Data is already sorted from the API
-
+                    const data = await fetchLeaderboard(window.lb.currentTab);
                     if (data.length === 0) {
                         list.innerHTML = '<div class="text-center text-gray-500 text-[10px] py-4">NO SCORES YET</div>';
                         return;
                     }
-
                     list.innerHTML = data.map((d, i) => `<div class="flex justify-between p-2 border-b border-gray-800 text-[10px]"><span>${i + 1}. ${d.name}</span> <span class="text-pulse-neon">${d.score}</span></div>`).join('');
                 } catch (e) {
                     console.error(e);
@@ -821,7 +836,18 @@
             submit: async () => {
                 const name = document.getElementById('playerNameInput').value.trim();
                 const wallet = document.getElementById('walletInput').value.trim();
-                if (!name) { alert("NAME REQUIRED"); return; }
+
+                if (!name) {
+                    alert('NAME REQUIRED');
+                    return;
+                }
+
+                if (!wallet) {
+                    if (!confirm("WARNING: You have not entered a prize wallet address. You will not be eligible for prizes. Continue anyway?")) {
+                        document.getElementById('walletTooltip').classList.remove('hidden');
+                        return;
+                    }
+                }
 
                 localStorage.setItem('player_name', name);
                 localStorage.setItem('player_wallet', wallet);
@@ -830,24 +856,18 @@
                 document.getElementById('btnSubmit').innerText = "SENDING...";
 
                 try {
-                    const type = sleighGame.active ? 'sleigh' : 'catch';
-                    const data = {
-                        name,
-                        wallet,
-                        score,
-                        user_id: user.uid,
-                        game_type: type
-                    };
+                    const gameType = sleighGame.active ? 'sleigh' : 'catch';
+                    const userId = 'user_' + Math.random().toString(36).substr(2, 9);
 
-                    const response = await fetch('/api/leaderboard/submit', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
+                    // Submit specific game score
+                    await submitScore({ name, wallet, score, user_id: userId, game_type: gameType });
 
-                    if (!response.ok) {
-                        throw new Error(`Failed to submit: ${response.statusText}`);
-                    }
+                    // Submit overall score (Sum of BEST scores)
+                    const bestSleigh = typeof localScores !== 'undefined' ? localScores.sleigh : 0;
+                    const bestCatch = typeof localScores !== 'undefined' ? localScores.catch : 0;
+                    const totalScore = bestSleigh + bestCatch;
+
+                    await submitScore({ name, wallet, score: totalScore, user_id: userId, game_type: 'overall' });
 
                     document.getElementById('submitContainer').classList.add('hidden');
                     document.getElementById('postSubmitActions').classList.remove('hidden');
@@ -861,6 +881,7 @@
         };
         document.getElementById('btnLeaderboard').addEventListener('click', () => { document.getElementById('leaderboardModal').classList.remove('hidden'); window.lb.switchTab('overall'); });
         document.getElementById('btnSubmit').addEventListener('click', window.lb.submit);
+        document.getElementById('walletInput').addEventListener('input', () => { document.getElementById('walletTooltip').classList.add('hidden'); });
     </script>
 </body>
 

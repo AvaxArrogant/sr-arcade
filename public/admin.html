@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcade Admin - Diamond Tier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        pulse: { main: '#9437ff', light: '#b77aff', neon: '#00ffcc', bg: '#120a1f' },
+                        retro: { red: '#ff0055', green: '#00ff66', yellow: '#ffd700' }
+                    },
+                    fontFamily: { pixel: ['"Press Start 2P"', 'cursive'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #000;
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        .pixel-panel {
+            background-color: #111;
+            border: 4px solid #fff;
+            box-shadow: 8px 8px 0px rgba(148, 55, 255, 0.5);
+        }
+
+        .pixel-input {
+            background: #000;
+            border: 2px solid #555;
+            color: #00ffcc;
+            padding: 10px;
+            width: 100%;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .pixel-btn {
+            background-color: #9437ff;
+            color: white;
+            border: 2px solid #fff;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.1s;
+            box-shadow: 4px 4px 0px #000;
+        }
+
+        .pixel-btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px #00ffcc;
+        }
+
+        .pixel-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 0px 0px 0px #000;
+        }
+
+        .pixel-table th {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 2px solid #333;
+            color: #888;
+            font-size: 10px;
+        }
+
+        .pixel-table td {
+            padding: 10px;
+            border-bottom: 1px solid #222;
+            font-size: 10px;
+        }
+
+        .pixel-table tr:hover {
+            background-color: #1a1a1a;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen p-4 md:p-8">
+
+    <!-- LOGIN MODAL -->
+    <div id="loginModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/95">
+        <div class="pixel-panel p-8 w-full max-w-md text-center">
+            <h1 class="text-xl text-pulse-neon mb-6">ADMIN ACCESS</h1>
+            <input type="password" id="adminPass" placeholder="PASSWORD" class="pixel-input mb-4 text-center">
+            <button onclick="admin.login()" class="pixel-btn w-full">UNLOCK</button>
+            <p id="loginError" class="text-retro-red text-[10px] mt-4 hidden">ACCESS DENIED</p>
+        </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard" class="hidden max-w-7xl mx-auto space-y-8">
+
+        <!-- HEADER -->
+        <div class="flex justify-between items-center border-b-4 border-white pb-4">
+            <div>
+                <h1 class="text-2xl text-pulse-neon mb-2">COMMAND CENTER</h1>
+                <p class="text-xs text-gray-400">SAINT RICHARDS ARCADE // DIAMOND TIER</p>
+            </div>
+            <button onclick="location.reload()" class="pixel-btn bg-red-600">LOGOUT</button>
+        </div>
+
+        <!-- STATS GRID -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="pixel-panel p-4">
+                <h3 class="text-[10px] text-gray-400 mb-2">TOTAL GAMES</h3>
+                <p id="statTotalGames" class="text-2xl text-white">Loading...</p>
+            </div>
+            <div class="pixel-panel p-4">
+                <h3 class="text-[10px] text-gray-400 mb-2">UNIQUE PLAYERS</h3>
+                <p id="statUniqueUsers" class="text-2xl text-pulse-neon">Loading...</p>
+            </div>
+            <div class="pixel-panel p-4">
+                <h3 class="text-[10px] text-gray-400 mb-2">TOP SCORE (DASH)</h3>
+                <p id="statTopDash" class="text-2xl text-retro-yellow">Loading...</p>
+            </div>
+            <div class="pixel-panel p-4">
+                <h3 class="text-[10px] text-gray-400 mb-2">TOP SCORE (CATCH)</h3>
+                <p id="statTopCatch" class="text-2xl text-retro-green">Loading...</p>
+            </div>
+        </div>
+
+        <!-- LEADERBOARD TABLE -->
+        <div class="pixel-panel p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg text-white">GLOBAL LEADERBOARD</h2>
+                <button onclick="admin.fetchLeaderboard()" class="text-xs text-pulse-neon hover:underline"><i
+                        class="fas fa-sync"></i> REFRESH</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full pixel-table">
+                    <thead>
+                        <tr>
+                            <th>RANK</th>
+                            <th>PLAYER</th>
+                            <th>WALLET ADDRESS</th>
+                            <th>SCORE</th>
+                            <th>GAME</th>
+                            <th>DATE</th>
+                            <th>ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lbTableBody">
+                        <!-- Rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- USER INSPECTOR MODAL -->
+    <div id="userModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+        <div class="pixel-panel w-full max-w-4xl h-[80vh] flex flex-col relative bg-black">
+            <button onclick="document.getElementById('userModal').classList.add('hidden')"
+                class="absolute top-4 right-4 text-white hover:text-retro-red">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+
+            <div class="p-6 border-b-2 border-gray-800">
+                <h2 class="text-xl text-pulse-neon mb-2">PLAYER INSPECTOR</h2>
+                <div class="flex gap-8 text-xs text-gray-400">
+                    <p>USER ID: <span id="inspectUserId" class="text-white">...</span></p>
+                    <p>WALLET: <span id="inspectWallet" class="text-white">...</span></p>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6">
+                <table class="w-full pixel-table">
+                    <thead>
+                        <tr>
+                            <th>TIMESTAMP</th>
+                            <th>GAME</th>
+                            <th>SCORE</th>
+                            <th>NAME USED</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userHistoryBody">
+                        <!-- History rows -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/admin';
+        let authToken = '';
+
+        const admin = {
+            login: async () => {
+                const pass = document.getElementById('adminPass').value;
+                if (!pass) return;
+
+                // Test auth by fetching stats
+                try {
+                    const res = await fetch(`${API_BASE}/stats`, {
+                        headers: { 'x-admin-password': pass }
+                    });
+
+                    if (res.ok) {
+                        authToken = pass;
+                        document.getElementById('loginModal').classList.add('hidden');
+                        document.getElementById('dashboard').classList.remove('hidden');
+                        admin.loadDashboard();
+                    } else {
+                        document.getElementById('loginError').classList.remove('hidden');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Connection Error');
+                }
+            },
+
+            loadDashboard: () => {
+                admin.fetchStats();
+                admin.fetchLeaderboard();
+            },
+
+            fetchStats: async () => {
+                const res = await fetch(`${API_BASE}/stats`, { headers: { 'x-admin-password': authToken } });
+                const data = await res.json();
+                document.getElementById('statTotalGames').innerText = data.total_games.toLocaleString();
+                document.getElementById('statUniqueUsers').innerText = data.unique_users.toLocaleString();
+                document.getElementById('statTopDash').innerText = data.top_sleigh.toLocaleString();
+                document.getElementById('statTopCatch').innerText = data.top_catch.toLocaleString();
+            },
+
+            fetchLeaderboard: async () => {
+                const tbody = document.getElementById('lbTableBody');
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">LOADING DATA...</td></tr>';
+
+                const res = await fetch(`${API_BASE}/leaderboard`, { headers: { 'x-admin-password': authToken } });
+                const data = await res.json();
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">NO RECORDS FOUND</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.map((row, i) => `
+                    <tr>
+                        <td class="text-retro-yellow">#${i + 1}</td>
+                        <td class="font-bold text-white">${row.name}</td>
+                        <td class="font-mono text-gray-400 text-[8px]">${row.wallet || 'N/A'}</td>
+                        <td class="text-pulse-neon">${row.score.toLocaleString()}</td>
+                        <td><span class="px-2 py-1 bg-gray-800 text-[8px] rounded">${row.game_type.toUpperCase()}</span></td>
+                        <td class="text-gray-500">${new Date(row.timestamp).toLocaleString()}</td>
+                        <td>
+                            <button onclick="admin.inspectUser('${row.user_id}', '${row.wallet}')" class="text-[8px] bg-blue-900 text-blue-200 px-2 py-1 hover:bg-blue-800">
+                                INSPECT
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            },
+
+            inspectUser: async (userId, wallet) => {
+                document.getElementById('userModal').classList.remove('hidden');
+                document.getElementById('inspectUserId').innerText = userId;
+                document.getElementById('inspectWallet').innerText = wallet || 'N/A';
+                document.getElementById('userHistoryBody').innerHTML = '<tr><td colspan="4" class="text-center py-4">LOADING HISTORY...</td></tr>';
+
+                const res = await fetch(`${API_BASE}/user/${userId}`, { headers: { 'x-admin-password': authToken } });
+                const data = await res.json();
+
+                document.getElementById('userHistoryBody').innerHTML = data.map(row => `
+                    <tr>
+                        <td class="text-gray-500">${new Date(row.timestamp).toLocaleString()}</td>
+                        <td><span class="text-${row.game_type === 'sleigh' ? 'retro-red' : 'pulse-main'}">${row.game_type.toUpperCase()}</span></td>
+                        <td class="text-white">${row.score.toLocaleString()}</td>
+                        <td class="text-gray-400">${row.name}</td>
+                    </tr>
+                `).join('');
+            }
+        };
+
+        // Allow Enter key on login
+        document.getElementById('adminPass').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') admin.login();
+        });
+    </script>
+</body>
+
+</html>

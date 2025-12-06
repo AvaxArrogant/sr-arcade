@@ -1,7 +1,18 @@
 {
   "name": "sr-arcade",
   "compatibility_date": "2025-12-06",
+  "main": "src/worker.js",
   "assets": {
-    "directory": "./"
+    "directory": "./public"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sr-arcade-leaderboard",
+      "database_id": "5be209cb-2568-43fd-97c5-4365ecbfea90"
+    }
+  ],
+  "observability": {
+    "enabled": false
   }
 }
