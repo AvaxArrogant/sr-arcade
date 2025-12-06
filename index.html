@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Saint Richards Arcade - Diamond Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        pulse: {
+                            main: '#9437ff',
+                            light: '#b77aff',
+                            neon: '#00ffcc',
+                            bg: '#120a1f',
+                            dark: '#000000',
+                        },
+                        retro: {
+                            red: '#ff0055',
+                            green: '#00ff66',
+                            yellow: '#ffd700',
+                            white: '#ffffff',
+                            gray: '#888888'
+                        }
+                    },
+                    fontFamily: {
+                        pixel: ['"Press Start 2P"', 'cursive'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #000;
+            color: white;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        .pixel-art {
+            image-rendering: pixelated;
+        }
+
+        .pixel-panel {
+            background-color: #000;
+            border: 4px solid #fff;
+            box-shadow: 8px 8px 0px rgba(148, 55, 255, 0.5);
+        }
+
+        .pixel-btn {
+            background-color: #9437ff;
+            color: white;
+            border: 4px solid #fff;
+            padding: 12px 20px;
+            font-size: 10px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.1s;
+            box-shadow: 4px 4px 0px #000;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .pixel-btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px #00ffcc;
+            background-color: #b77aff;
+        }
+
+        .pixel-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 0px 0px 0px #000;
+        }
+
+        .pixel-btn.secondary {
+            background-color: #333;
+            border-color: #888;
+        }
+
+        .pixel-btn.danger {
+            background-color: #ff0055;
+        }
+
+        .pixel-input {
+            background: #111;
+            border: 2px solid #555;
+            color: #00ffcc;
+            font-family: 'Press Start 2P', cursive;
+            padding: 10px;
+            width: 100%;
+            outline: none;
+            text-transform: uppercase;
+        }
+
+        .pixel-input:focus {
+            border-color: #00ffcc;
+        }
+
+        .scanlines {
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px;
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .zone-text {
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        @media (max-width: 640px) {
+            .pixel-panel {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="h-screen w-screen relative">
+
+    <div class="scanlines"></div>
+    <canvas id="gameCanvas" class="absolute inset-0 z-0 pixel-art"></canvas>
+
+    <!-- Zone Indicator (Sleigh Dash) -->
+    <div id="zoneIndicator"
+        class="hidden absolute top-20 left-1/2 transform -translate-x-1/2 text-center pointer-events-none z-20 transition-opacity duration-1000 opacity-0">
+        <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">ENTERING ZONE</p>
+        <h2 id="zoneTitle" class="text-2xl text-white font-bold zone-text text-shadow">FROSTY PLAINS</h2>
+    </div>
+
+    <!-- Level Up Notification -->
+    <div id="levelUpNotice"
+        class="hidden absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-30">
+        <h2 class="text-4xl text-pulse-neon font-bold zone-text mb-2 animate-bounce">LEVEL UP!</h2>
+        <p id="levelUpNum" class="text-xl text-white">LEVEL 2</p>
+    </div>
+
+    <!-- UI LAYER -->
+    <div id="uiLayer" class="absolute inset-0 z-10 flex flex-col pointer-events-none p-4">
+
+        <!-- HEADER -->
+        <div class="flex justify-between items-start pointer-events-auto">
+            <div class="pixel-panel p-2 md:p-3 flex items-center gap-4 bg-black/80">
+                <div class="flex flex-col gap-1">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-cube text-pulse-neon animate-pulse"></i>
+                        <span class="text-[8px] md:text-[10px] text-pulse-light">SAINT RICHARDS ARCADE</span>
+                    </div>
+                    <div class="flex gap-3 text-[10px] md:text-xs">
+                        <span id="scoreDisplay" class="hidden text-white">SCORE: <span
+                                class="text-pulse-neon">0</span></span>
+                        <span id="levelDisplay" class="hidden text-retro-yellow">LVL: <span>1</span></span>
+                    </div>
+                </div>
+                <div class="border-l border-gray-600 pl-4 flex flex-col justify-center">
+                    <span id="highScoreDisplay" class="text-[8px] text-gray-400">BEST: <span
+                            class="text-white">0</span></span>
+                </div>
+            </div>
+
+            <!-- Coal Tracker (Visible in Sleigh Game) -->
+            <div id="coalTracker" class="hidden pixel-panel p-2 flex items-center gap-2 bg-black/80 text-xs">
+                <span class="text-gray-400">COAL:</span>
+                <div class="flex gap-1" id="coalIcons">
+                    <div class="w-3 h-3 rounded-full border border-gray-500"></div>
+                    <div class="w-3 h-3 rounded-full border border-gray-500"></div>
+                    <div class="w-3 h-3 rounded-full border border-gray-500"></div>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="app.toggleSettings()" class="pixel-btn secondary">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button id="btnLeaderboard" class="pixel-btn">
+                    <i class="fas fa-trophy"></i> <span class="hidden md:inline">RANK</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- MAIN MENU -->
+        <div id="mainMenu"
+            class="flex-1 flex flex-col items-center justify-center pointer-events-auto transition-opacity duration-300">
+            <div class="text-center mb-6 md:mb-10">
+                <h1 class="text-2xl md:text-5xl text-white mb-4 leading-relaxed" style="text-shadow: 4px 4px #9437ff;">
+                    SAINT<br>RICHARDS</h1>
+                <div
+                    class="bg-pulse-neon text-black px-4 py-2 inline-block text-sm md:text-xl font-bold transform -rotate-2 border-2 border-white">
+                    ARCADE</div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 w-full max-w-3xl px-4">
+                <button onclick="app.tryLaunch('SLEIGH')"
+                    class="pixel-panel p-4 md:p-6 hover:bg-white/10 transition group text-left relative">
+                    <div
+                        class="absolute -top-3 -right-3 bg-retro-red border-2 border-white text-white text-[8px] px-2 py-1 animate-bounce">
+                        HOT</div>
+                    <div class="flex items-center gap-4 mb-2">
+                        <i class="fas fa-sleigh text-2xl md:text-3xl text-retro-red"></i>
+                        <h2 class="text-xs md:text-sm text-pulse-neon">SAINT RICHARD'S DASH</h2>
+                    </div>
+                    <p class="text-gray-400 text-[8px] md:text-[10px] leading-relaxed">Collect Gifts.<br>Jump Over Low
+                        Coal.<br>Speed Ramps Up.</p>
+                </button>
+
+                <button onclick="app.tryLaunch('CATCH')"
+                    class="pixel-panel p-4 md:p-6 hover:bg-white/10 transition group text-left">
+                    <div class="flex items-center gap-4 mb-2">
+                        <i class="fas fa-shield-alt text-2xl md:text-3xl text-pulse-main"></i>
+                        <h2 class="text-xs md:text-sm text-pulse-neon">SAINT RICHARD'S CATCH</h2>
+                    </div>
+                    <p class="text-gray-400 text-[8px] md:text-[10px] leading-relaxed">Arcade Reflex.<br>Magnet &
+                        Shield.<br>Don't Hit Coal.</p>
+                </button>
+            </div>
+        </div>
+
+        <!-- GAME OVER SCREEN -->
+        <div id="gameOverScreen"
+            class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/90 pointer-events-auto p-4">
+            <div class="pixel-panel p-6 w-full max-w-md text-center border-retro-red">
+                <h2 class="text-xl md:text-2xl text-retro-red mb-4">GAME OVER</h2>
+                <div id="gameOverReason" class="text-[10px] text-gray-400 mb-4 uppercase tracking-widest">CRASHED</div>
+
+                <div class="mb-6 border-b-2 border-gray-800 pb-4">
+                    <div class="flex justify-between px-8">
+                        <div class="text-center">
+                            <p class="text-[8px] text-gray-500 mb-1">SCORE</p>
+                            <p id="finalScoreVal" class="text-2xl text-pulse-neon">0</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-[8px] text-gray-500 mb-1">LEVEL</p>
+                            <p id="finalLevelVal" class="text-2xl text-retro-yellow">1</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="submitContainer" class="space-y-4 text-left">
+                    <div>
+                        <label class="text-[8px] text-gray-400 block mb-1">PILOT NAME</label>
+                        <input type="text" id="playerNameInput" maxlength="12" placeholder="PLAYER 1"
+                            class="pixel-input">
+                    </div>
+                    <div>
+                        <label class="text-[8px] text-gray-400 block mb-1">PRIZE WALLET (0x...)</label>
+                        <input type="text" id="walletInput" placeholder="0x..." class="pixel-input">
+                    </div>
+
+                    <button id="btnSubmit" class="pixel-btn w-full mt-2">
+                        SUBMIT RECORD
+                    </button>
+                </div>
+
+                <div id="postSubmitActions" class="hidden space-y-4 pt-2">
+                    <div class="bg-green-900/50 border border-green-500 text-green-400 p-3 text-[10px]">
+                        <i class="fas fa-check"></i> DATA UPLOADED
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="app.returnToMenu()" class="pixel-btn secondary flex-1">MENU</button>
+                        <button onclick="app.restartGame()" class="pixel-btn flex-1">RETRY</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEADERBOARD MODAL -->
+    <div id="leaderboardModal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 pointer-events-auto">
+        <div class="pixel-panel w-full max-w-2xl flex flex-col max-h-[85vh]">
+            <div class="bg-pulse-main text-white p-3 border-b-4 border-white flex justify-between items-center">
+                <h3 class="text-xs md:text-sm"><i class="fas fa-crown text-retro-yellow"></i> HALL OF FAME</h3>
+                <button onclick="document.getElementById('leaderboardModal').classList.add('hidden')"
+                    class="hover:text-black transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="flex border-b-4 border-white bg-gray-900">
+                <button onclick="lb.switchTab('overall')"
+                    class="lb-tab flex-1 py-3 text-[10px] hover:bg-gray-800 text-gray-400"
+                    data-tab="overall">OVERALL</button>
+                <button onclick="lb.switchTab('sleigh')"
+                    class="lb-tab flex-1 py-3 text-[10px] hover:bg-gray-800 text-gray-400"
+                    data-tab="sleigh">DASH</button>
+                <button onclick="lb.switchTab('catch')"
+                    class="lb-tab flex-1 py-3 text-[10px] hover:bg-gray-800 text-gray-400"
+                    data-tab="catch">CATCH</button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 bg-black">
+                <div id="lbList" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settingsModal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 pointer-events-auto">
+        <div class="pixel-panel w-full max-w-sm p-6">
+            <h3 class="text-center border-b-2 border-gray-800 pb-4 mb-6 text-pulse-light">SETTINGS</h3>
+            <div class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-300">SOUND FX</span>
+                    <button id="btnToggleSound" onclick="audio.toggle()"
+                        class="w-8 h-8 border-2 border-white flex items-center justify-center text-xs">ON</button>
+                </div>
+                <button
+                    onclick="document.getElementById('settingsModal').classList.add('hidden'); document.getElementById('leaderboardModal').classList.remove('hidden'); window.lb.switchTab('overall');"
+                    class="w-full border-2 border-gray-700 hover:border-white p-3 text-left flex justify-between items-center text-xs">
+                    <span>VIEW LEADERBOARD</span>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <button onclick="document.getElementById('settingsModal').classList.add('hidden')"
+                class="pixel-btn secondary w-full mt-8">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- TOS MODAL -->
+    <div id="tosModal"
+        class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/95 p-4 pointer-events-auto">
+        <div class="pixel-panel w-full max-w-md p-6 text-center border-retro-red">
+            <i class="fas fa-exclamation-triangle text-4xl text-retro-red mb-4 animate-pulse"></i>
+            <h2 class="text-lg text-white mb-4">FAIR PLAY NOTICE</h2>
+            <div class="text-[10px] text-gray-300 mb-6 leading-relaxed text-left border border-gray-800 p-4">
+                <p class="mb-2">Diamond Tier Standards:</p>
+                <ul class="list-disc pl-4 space-y-2 text-retro-red">
+                    <li>NO BOTS OR SCRIPTS</li>
+                    <li>NO CLIENT MODIFICATIONS</li>
+                    <li>ONE ACCOUNT PER HUMAN</li>
+                </ul>
+            </div>
+            <button onclick="app.acceptTos()" class="pixel-btn danger w-full">I AGREE - ENTER ARCADE</button>
+        </div>
+    </div>
+
+    <!-- LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, query, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'saint-richards-arcade';
+        let db, auth, user, isOnline = false;
+
+        if (firebaseConfig) {
+            try {
+                const fApp = initializeApp(firebaseConfig);
+                auth = getAuth(fApp);
+                db = getFirestore(fApp);
+                const initAuth = async () => {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+                    else await signInAnonymously(auth);
+                };
+                initAuth();
+                onAuthStateChanged(auth, (u) => { if (u) { user = u; isOnline = true; } });
+            } catch (e) { console.error("Firebase init failed:", e); }
+        }
+
+        const audio = {
+            enabled: true, ctx: null,
+            init: () => { if (!audio.ctx) audio.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+            toggle: () => {
+                audio.enabled = !audio.enabled;
+                const btn = document.getElementById('btnToggleSound');
+                btn.innerText = audio.enabled ? "ON" : "OFF";
+                btn.style.backgroundColor = audio.enabled ? "#9437ff" : "transparent";
+            },
+            play: (freq, type, dur) => {
+                if (!audio.enabled || !audio.ctx) return;
+                const osc = audio.ctx.createOscillator();
+                const gain = audio.ctx.createGain();
+                osc.type = type; osc.frequency.setValueAtTime(freq, audio.ctx.currentTime);
+                gain.gain.setValueAtTime(0.05, audio.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audio.ctx.currentTime + dur);
+                osc.connect(gain); gain.connect(audio.ctx.destination);
+                osc.start(); osc.stop(audio.ctx.currentTime + dur);
+            },
+            jump: () => audio.play(150, 'square', 0.1),
+            collect: () => audio.play(800, 'sine', 0.1),
+            crash: () => audio.play(100, 'sawtooth', 0.4),
+            explode: () => {
+                if (!audio.enabled || !audio.ctx) return;
+                const osc = audio.ctx.createOscillator();
+                const gain = audio.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audio.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(0.01, audio.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.2, audio.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audio.ctx.currentTime + 0.3);
+                osc.connect(gain); gain.connect(audio.ctx.destination);
+                osc.start(); osc.stop(audio.ctx.currentTime + 0.3);
+            },
+            powerup: () => audio.play(400, 'triangle', 0.3),
+            shieldHit: () => audio.play(200, 'square', 0.2),
+            thud: () => audio.play(50, 'sawtooth', 0.2),
+            levelUp: () => {
+                audio.play(600, 'sine', 0.1);
+                setTimeout(() => audio.play(800, 'sine', 0.1), 100);
+                setTimeout(() => audio.play(1000, 'sine', 0.3), 200);
+            }
+        };
+        window.audio = audio;
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const STATE = { MENU: 0, PLAYING_SLEIGH: 1, PLAYING_CATCH: 2, GAMEOVER: 3 };
+        let currentState = STATE.MENU;
+        let score = 0, frames = 0, gameSpeed = 4, pendingGameType = null;
+        let currentLevel = 1;
+        let tosAccepted = sessionStorage.getItem('tos_accepted') === 'true';
+        let localScores = { sleigh: parseInt(localStorage.getItem('hs_sleigh')) || 0, catch: parseInt(localStorage.getItem('hs_catch')) || 0 };
+
+        // --- EXPLOSION SYSTEM ---
+        let explosions = [];
+        function createExplosion(x, y) {
+            audio.explode();
+            for (let i = 0; i < 15; i++) {
+                explosions.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    size: Math.random() * 6 + 2,
+                    color: ['#ef4444', '#f97316', '#fbbf24'][Math.floor(Math.random() * 3)],
+                    life: 1.0
+                });
+            }
+        }
+        function updateDrawExplosions() {
+            for (let i = explosions.length - 1; i >= 0; i--) {
+                let p = explosions[i];
+                p.x += p.vx; p.y += p.vy;
+                p.life -= 0.05;
+                if (p.life <= 0) { explosions.splice(i, 1); continue; }
+                ctx.globalAlpha = p.life;
+                drawPixelRect(p.x, p.y, p.size, p.size, p.color);
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        const app = {
+            resize: () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; ctx.imageSmoothingEnabled = false; },
+            toggleSettings: () => document.getElementById('settingsModal').classList.remove('hidden'),
+            tryLaunch: (type) => { audio.init(); if (!tosAccepted) { pendingGameType = type; document.getElementById('tosModal').classList.remove('hidden'); } else app.launchGame(type); },
+            acceptTos: () => { tosAccepted = true; sessionStorage.setItem('tos_accepted', 'true'); document.getElementById('tosModal').classList.add('hidden'); if (pendingGameType) app.launchGame(pendingGameType); },
+
+            launchGame: (type) => {
+                document.getElementById('mainMenu').classList.add('hidden');
+                document.getElementById('scoreDisplay').classList.remove('hidden');
+                document.getElementById('levelDisplay').classList.remove('hidden');
+                score = 0; frames = 0; currentLevel = 1; explosions = [];
+                document.getElementById('scoreDisplay').querySelector('span').innerText = '0';
+                document.getElementById('levelDisplay').querySelector('span').innerText = '1';
+
+                if (type === 'SLEIGH') {
+                    currentState = STATE.PLAYING_SLEIGH;
+                    gameSpeed = 5;
+                    document.getElementById('highScoreDisplay').querySelector('span').innerText = localScores.sleigh;
+                    document.getElementById('coalTracker').classList.remove('hidden');
+                    sleighGame.init();
+                } else {
+                    currentState = STATE.PLAYING_CATCH;
+                    gameSpeed = 3;
+                    document.getElementById('highScoreDisplay').querySelector('span').innerText = localScores.catch;
+                    document.getElementById('coalTracker').classList.add('hidden');
+                    catchGame.init();
+                }
+            },
+
+            showLevelUp: () => {
+                currentLevel++;
+                audio.levelUp();
+                document.getElementById('levelDisplay').querySelector('span').innerText = currentLevel;
+                const notice = document.getElementById('levelUpNotice');
+                const num = document.getElementById('levelUpNum');
+                num.innerText = "LEVEL " + currentLevel;
+                notice.classList.remove('hidden');
+                setTimeout(() => notice.classList.add('hidden'), 2000);
+            },
+
+            gameOver: (reason = "CRASHED") => {
+                if (currentState === STATE.GAMEOVER) return;
+                // Note: audio.explode() is called by createExplosion before calling this
+                currentState = STATE.GAMEOVER;
+                document.getElementById('gameOverScreen').classList.remove('hidden');
+                document.getElementById('finalScoreVal').innerText = score;
+                document.getElementById('finalLevelVal').innerText = currentLevel;
+                document.getElementById('gameOverReason').innerText = reason;
+                document.getElementById('submitContainer').classList.remove('hidden');
+                document.getElementById('postSubmitActions').classList.add('hidden');
+                document.getElementById('btnSubmit').disabled = false;
+                document.getElementById('btnSubmit').innerText = "SUBMIT RECORD";
+
+                document.getElementById('playerNameInput').value = localStorage.getItem('player_name') || '';
+                document.getElementById('walletInput').value = localStorage.getItem('player_wallet') || '';
+
+                if (sleighGame.active && score > localScores.sleigh) { localScores.sleigh = score; localStorage.setItem('hs_sleigh', score); }
+                if (catchGame.active && score > localScores.catch) { localScores.catch = score; localStorage.setItem('hs_catch', score); }
+            },
+
+            restartGame: () => { document.getElementById('gameOverScreen').classList.add('hidden'); if (sleighGame.active) app.launchGame('SLEIGH'); else app.launchGame('CATCH'); },
+            returnToMenu: () => { currentState = STATE.MENU; document.getElementById('gameOverScreen').classList.add('hidden'); document.getElementById('mainMenu').classList.remove('hidden'); document.getElementById('scoreDisplay').classList.add('hidden'); document.getElementById('levelDisplay').classList.add('hidden'); document.getElementById('coalTracker').classList.add('hidden'); }
+        };
+
+        window.app = app;
+        window.addEventListener('resize', app.resize);
+        app.resize();
+
+        // --- GRAPHICS ---
+        function drawPixelRect(x, y, w, h, color) { ctx.fillStyle = color; ctx.fillRect(Math.floor(x), Math.floor(y), Math.floor(w), Math.floor(h)); }
+
+        function drawGift(x, y, size) {
+            let colors = ['#ef4444', '#22c55e', '#3b82f6'];
+            let col = colors[Math.floor((x / 100) % 3)];
+            drawPixelRect(x, y, size, size, col);
+            drawPixelRect(x + size / 2 - 2, y, 4, size, '#fbbf24');
+            drawPixelRect(x, y + size / 2 - 2, size, 4, '#fbbf24');
+            drawPixelRect(x + size / 2 - 4, y - 4, 8, 4, '#fbbf24');
+        }
+
+        function drawCoal(x, y, size) {
+            ctx.shadowBlur = 15; ctx.shadowColor = '#f43f5e';
+            ctx.fillStyle = '#1f2937'; ctx.beginPath(); ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#f43f5e'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x + size / 2 - 5, y + size / 2 - 5, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        function drawMagnet(x, y, size) {
+            ctx.save(); ctx.translate(x + size / 2, y + size / 2);
+            ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.arc(0, 0, 10, Math.PI, 0); ctx.lineTo(10, 15); ctx.moveTo(-10, 0); ctx.lineTo(-10, 15); ctx.stroke();
+            ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-13, 10, 6, 6); ctx.fillRect(7, 10, 6, 6);
+            ctx.restore();
+        }
+
+        function drawShieldIcon(x, y, size) {
+            ctx.fillStyle = '#06b6d4'; drawPixelRect(x, y, size, size / 2, '#06b6d4');
+            ctx.beginPath(); ctx.moveTo(x, y + size / 2); ctx.lineTo(x + size / 2, y + size); ctx.lineTo(x + size, y + size / 2); ctx.fill();
+            drawPixelRect(x + size / 2 - 2, y + 4, 4, size - 8, '#fff'); drawPixelRect(x + 4, y + size / 3, size - 8, 4, '#fff');
+        }
+
+        function drawSantaSprite(x, y, scale = 1, isSleigh = false) {
+            ctx.save(); ctx.translate(Math.floor(x), Math.floor(y)); ctx.scale(scale, scale);
+            if (isSleigh) {
+                drawPixelRect(0, 10, 40, 10, '#8B4513'); drawPixelRect(0, 20, 40, 2, '#FFD700');
+                drawPixelRect(10, 0, 15, 15, '#ff0055'); drawPixelRect(15, -5, 5, 5, '#ff0055');
+                drawPixelRect(20, -5, 3, 3, '#fff'); drawPixelRect(22, 2, 6, 4, '#fff');
+                drawPixelRect(-2, 12, 4, 4, '#00ffcc');
+            } else {
+                drawPixelRect(-10, -20, 20, 30, '#ff0055'); drawPixelRect(-5, -25, 10, 10, '#ff0055');
+                drawPixelRect(-2, -28, 4, 4, '#fff'); drawPixelRect(-8, -10, 16, 4, '#000');
+                drawPixelRect(-8, -10, 4, 4, '#FFD700'); drawPixelRect(-6, -18, 12, 4, '#00ffcc');
+            }
+            ctx.restore();
+        }
+
+        let snowParticles = [];
+        function createSnow() { if (frames % 15 === 0) snowParticles.push({ x: Math.random() * canvas.width, y: -10, size: Math.random() * 2 + 1, speed: Math.random() * 1 + 1 }); }
+        function drawSnow() {
+            ctx.fillStyle = '#fff';
+            for (let i = snowParticles.length - 1; i >= 0; i--) {
+                let p = snowParticles[i]; p.y += p.speed; drawPixelRect(p.x, p.y, p.size, p.size, '#fff'); if (p.y > canvas.height) snowParticles.splice(i, 1);
+            }
+        }
+
+        // --- SLEIGH DASH ---
+        const ZONES = [
+            { name: "FROSTY PLAINS", color: "#00ccff", bg: "#002233", type: "SIMPLE" },
+            { name: "NEON CITY", color: "#d946ef", bg: "#2e0225", type: "LOW_HIGH" },
+            { name: "THE GLITCH", color: "#22c55e", bg: "#022c22", type: "COMPLEX" }
+        ];
+
+        const sleighGame = {
+            active: false, santaY: 0, santaDy: 0, gravity: 0.6, jumpPower: -11.5,
+            groundY: 0, obstacles: [], tokens: [], zone: 0, coal: 0,
+            levelThreshold: 100, transitionTimer: 0,
+
+            init: () => {
+                sleighGame.active = true; catchGame.active = false;
+                sleighGame.santaY = canvas.height / 2; sleighGame.santaDy = 0;
+                sleighGame.obstacles = []; sleighGame.tokens = []; snowParticles = [];
+                sleighGame.groundY = canvas.height - 100; sleighGame.coal = 0;
+                sleighGame.levelThreshold = 100; sleighGame.transitionTimer = 0;
+                sleighGame.updateCoalUI(); sleighGame.setZone(0);
+            },
+
+            updateCoalUI: () => {
+                const icons = document.getElementById('coalIcons').children;
+                for (let i = 0; i < 3; i++) icons[i].className = i < sleighGame.coal ? "w-3 h-3 rounded-full bg-red-600 border border-red-800" : "w-3 h-3 rounded-full border border-gray-500";
+            },
+
+            setZone: (idx) => {
+                sleighGame.zone = idx; const z = ZONES[idx];
+                const indicator = document.getElementById('zoneIndicator');
+                document.getElementById('zoneTitle').innerText = z.name;
+                document.getElementById('zoneTitle').style.color = z.color;
+                indicator.classList.remove('opacity-0'); setTimeout(() => indicator.classList.add('opacity-0'), 2000);
+            },
+
+            update: () => {
+                // PHYSICS
+                sleighGame.santaDy += sleighGame.gravity;
+                sleighGame.santaY += sleighGame.santaDy;
+                if (sleighGame.santaY > sleighGame.groundY - 20) { sleighGame.santaY = sleighGame.groundY - 20; sleighGame.santaDy = 0; }
+
+                // LEVEL UP LOGIC
+                if (sleighGame.transitionTimer > 0) {
+                    sleighGame.transitionTimer--;
+                    // Still move existing entities off screen but don't spawn
+                    sleighGame.updateEntities();
+                    return;
+                }
+
+                if (score >= sleighGame.levelThreshold) {
+                    app.showLevelUp();
+                    sleighGame.levelThreshold += 100; // Next level in 100 pts
+                    sleighGame.transitionTimer = 120; // 2 seconds (at 60fps)
+                    gameSpeed += 0.5; // Difficulty Bump
+                    return;
+                }
+
+                gameSpeed += 0.0003;
+                if (sleighGame.zone === 0) createSnow();
+                if (score > 30 && sleighGame.zone === 0) sleighGame.setZone(1);
+                if (score > 100 && sleighGame.zone === 1) sleighGame.setZone(2);
+
+                const dist = 300;
+                let lastX = sleighGame.obstacles.length > 0 ? sleighGame.obstacles[sleighGame.obstacles.length - 1].x : canvas.width;
+
+                if (canvas.width - lastX > dist) {
+                    let type = 'GROUND', h = 30, y = sleighGame.groundY - 30;
+                    if (sleighGame.zone === 0) { h = 30; y = sleighGame.groundY - h; }
+                    else if (sleighGame.zone === 1) {
+                        if (Math.random() > 0.6) { type = 'FLOATING'; h = 40; y = sleighGame.groundY - 100 - Math.random() * 20; } else { h = 40; y = sleighGame.groundY - h; }
+                    } else {
+                        if (Math.random() > 0.5) { type = 'FLOATING'; h = 50; y = sleighGame.groundY - 100; } else { h = 50; y = sleighGame.groundY - h; }
+                    }
+                    sleighGame.obstacles.push({ x: canvas.width, y: y, w: 40, h: h, type: type });
+                }
+
+                if (frames % 100 === 0) {
+                    let isCoal = Math.random() > 0.8;
+                    let yPos = sleighGame.groundY - 80 - (Math.random() * 60);
+                    if (isCoal && Math.random() > 0.5) yPos = sleighGame.groundY - 40;
+                    sleighGame.tokens.push({ x: canvas.width, y: yPos, r: 20, type: isCoal ? 'COAL' : 'GIFT', active: true });
+                }
+                sleighGame.updateEntities();
+            },
+
+            updateEntities: () => {
+                sleighGame.draw();
+            },
+
+            draw: () => {
+                const z = ZONES[sleighGame.zone];
+                drawPixelRect(0, sleighGame.groundY, canvas.width, 20, z.color);
+                drawSnow();
+                drawSantaSprite(50, sleighGame.santaY, 1, true);
+
+                for (let i = sleighGame.obstacles.length - 1; i >= 0; i--) {
+                    let obs = sleighGame.obstacles[i]; obs.x -= gameSpeed;
+                    let c = obs.type === 'FLOATING' ? '#fff' : z.color;
+                    drawPixelRect(obs.x, obs.y, obs.w, obs.h, c); drawPixelRect(obs.x + 4, obs.y + 4, obs.w - 8, obs.h - 8, '#000');
+                    if (55 < obs.x + obs.w - 4 && 85 > obs.x + 4 && sleighGame.santaY + 5 < obs.y + obs.h - 4 && sleighGame.santaY + 20 > obs.y + 4) {
+                        createExplosion(50, sleighGame.santaY);
+                        app.gameOver("CRASHED!");
+                    }
+                    if (obs.x < -50) sleighGame.obstacles.splice(i, 1);
+                }
+
+                for (let i = sleighGame.tokens.length - 1; i >= 0; i--) {
+                    let t = sleighGame.tokens[i]; t.x -= gameSpeed;
+                    if (t.active) {
+                        if (t.type === 'GIFT') drawGift(t.x, t.y, t.r); else drawCoal(t.x, t.y, t.r);
+                        let dx = 70 - t.x, dy = (sleighGame.santaY + 10) - t.y;
+                        if (Math.sqrt(dx * dx + dy * dy) < 40) {
+                            t.active = false;
+                            if (t.type === 'GIFT') { score += 10; audio.collect(); }
+                            else {
+                                sleighGame.coal++;
+                                createExplosion(t.x, t.y); // Boom on coal hit
+                                sleighGame.updateCoalUI();
+                                if (sleighGame.coal >= 3) app.gameOver("TOO MUCH COAL!");
+                            }
+                            document.getElementById('scoreDisplay').querySelector('span').innerText = score;
+                        }
+                    }
+                    if (t.x < -50) sleighGame.tokens.splice(i, 1);
+                }
+            }
+        };
+
+        // --- PULSE CATCH ---
+        const catchGame = {
+            active: false, playerX: 0, items: [], magnetMode: false, magnetTimer: 0, shieldActive: false,
+            levelThreshold: 150, transitionTimer: 0,
+
+            init: () => {
+                sleighGame.active = false; catchGame.active = true;
+                catchGame.playerX = canvas.width / 2; catchGame.items = [];
+                catchGame.magnetMode = false; catchGame.shieldActive = false;
+                catchGame.levelThreshold = 150; catchGame.transitionTimer = 0;
+            },
+
+            update: () => {
+                if (catchGame.magnetMode) { catchGame.magnetTimer--; if (catchGame.magnetTimer <= 0) catchGame.magnetMode = false; }
+
+                // LEVEL UP LOGIC
+                if (catchGame.transitionTimer > 0) {
+                    catchGame.transitionTimer--;
+                    catchGame.drawEntities(); // Keep drawing, stop spawning
+                    return;
+                }
+
+                if (score >= catchGame.levelThreshold) {
+                    app.showLevelUp();
+                    catchGame.levelThreshold += 150;
+                    catchGame.transitionTimer = 120;
+                    gameSpeed += 0.5;
+                    return;
+                }
+
+                gameSpeed += 0.0001;
+
+                if (frames % 40 === 0) {
+                    let r = Math.random();
+                    let type = r > 0.2 ? 'GOOD' : 'BAD';
+                    if (r > 0.95) type = Math.random() > 0.5 ? 'MAGNET' : 'SHIELD';
+                    catchGame.items.push({ x: Math.random() * (canvas.width - 40) + 20, y: -20, type: type, r: 15, vy: Math.random() * 2 + gameSpeed });
+                }
+                catchGame.drawEntities();
+            },
+
+            drawEntities: () => {
+                drawSantaSprite(catchGame.playerX, canvas.height - 50, 1.5, false);
+                if (catchGame.magnetMode) { ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(catchGame.playerX, canvas.height - 35, 60, 0, Math.PI * 2); ctx.stroke(); }
+                if (catchGame.shieldActive) { ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(catchGame.playerX, canvas.height - 35, 50, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = 'rgba(6, 182, 212, 0.1)'; ctx.fill(); }
+
+                for (let i = catchGame.items.length - 1; i >= 0; i--) {
+                    let item = catchGame.items[i]; item.y += item.vy;
+                    if (catchGame.magnetMode && item.type === 'GOOD' && item.y > canvas.height / 2) item.x += (catchGame.playerX - item.x) * 0.1;
+
+                    if (item.type === 'GOOD') drawGift(item.x - 10, item.y - 10, 20);
+                    else if (item.type === 'MAGNET') drawMagnet(item.x - 10, item.y - 10, 20);
+                    else if (item.type === 'SHIELD') drawShieldIcon(item.x - 10, item.y - 10, 20);
+                    else drawCoal(item.x - 10, item.y - 10, 20);
+
+                    if (item.y > canvas.height - 70 && item.y < canvas.height - 20 && Math.abs(item.x - catchGame.playerX) < 40) {
+                        if (item.type === 'BAD') {
+                            if (catchGame.shieldActive) {
+                                catchGame.shieldActive = false;
+                                createExplosion(item.x, item.y); // Shield deflect
+                                catchGame.items.splice(i, 1);
+                            } else {
+                                createExplosion(catchGame.playerX, canvas.height - 30);
+                                app.gameOver("HIT BY COAL!");
+                            }
+                        } else {
+                            if (item.type === 'MAGNET') { catchGame.magnetMode = true; catchGame.magnetTimer = 300; audio.powerup(); }
+                            else if (item.type === 'SHIELD') { catchGame.shieldActive = true; audio.powerup(); }
+                            else { score += 5; audio.collect(); }
+                            catchGame.items.splice(i, 1);
+                            document.getElementById('scoreDisplay').querySelector('span').innerText = score;
+                        }
+                    }
+                    if (item.y > canvas.height) catchGame.items.splice(i, 1);
+                }
+            }
+        };
+
+        window.addEventListener('keydown', (e) => { if (e.code === 'Space' && currentState === STATE.PLAYING_SLEIGH) { sleighGame.santaDy = sleighGame.jumpPower; audio.jump(); } });
+        window.addEventListener('touchstart', (e) => { if (currentState === STATE.PLAYING_SLEIGH) { sleighGame.santaDy = sleighGame.jumpPower; audio.jump(); } if (currentState === STATE.PLAYING_CATCH) catchGame.playerX = e.touches[0].clientX; });
+        window.addEventListener('mousedown', () => { if (currentState === STATE.PLAYING_SLEIGH) { sleighGame.santaDy = sleighGame.jumpPower; audio.jump(); } });
+        window.addEventListener('mousemove', (e) => { if (currentState === STATE.PLAYING_CATCH) catchGame.playerX = e.clientX; });
+
+        function gameLoop() {
+            requestAnimationFrame(gameLoop);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            frames++;
+
+            let bgCol = '#120a1f'; ctx.fillStyle = bgCol; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff'; for (let i = 0; i < 30; i++) { let sx = ((i * 137) + frames * (i % 3 + 1) * 0.5) % canvas.width; let sy = ((i * 93)) % canvas.height; ctx.fillRect(Math.floor(sx), Math.floor(sy), 2, 2); }
+
+            if (currentState === STATE.PLAYING_SLEIGH) sleighGame.update();
+            else if (currentState === STATE.PLAYING_CATCH) catchGame.update();
+
+            updateDrawExplosions(); // Always draw explosions
+        }
+        gameLoop();
+
+        window.lb = {
+            currentTab: 'overall',
+            switchTab: (tab) => {
+                window.lb.currentTab = tab;
+                document.querySelectorAll('.lb-tab').forEach(b => { b.classList.remove('text-white', 'border-white'); b.classList.add('text-gray-400', 'border-transparent'); if (b.dataset.tab === tab) { b.classList.add('text-white', 'border-white'); b.classList.remove('text-gray-400', 'border-transparent'); } });
+                window.lb.fetch();
+            },
+            fetch: async () => {
+                const list = document.getElementById('lbList');
+                list.innerHTML = '<div class="text-center text-[10px] py-4">LOADING...</div>';
+                if (!isOnline) { list.innerHTML = '<div class="text-center text-red-500 text-[10px] py-4">OFFLINE</div>'; return; }
+                try {
+                    const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', `leaderboard_${window.lb.currentTab}`));
+                    let data = []; snap.forEach(d => data.push(d.data()));
+                    data.sort((a, b) => b.score - a.score);
+                    list.innerHTML = data.slice(0, 50).map((d, i) => `<div class="flex justify-between p-2 border-b border-gray-800 text-[10px]"><span>${i + 1}. ${d.name}</span> <span class="text-pulse-neon">${d.score}</span></div>`).join('');
+                } catch (e) { list.innerHTML = 'ERROR'; }
+            },
+            submit: async () => {
+                const name = document.getElementById('playerNameInput').value.trim();
+                const wallet = document.getElementById('walletInput').value.trim();
+                if (!name || !isOnline) { alert("NAME REQ / OFFLINE"); return; }
+                localStorage.setItem('player_name', name); localStorage.setItem('player_wallet', wallet);
+                document.getElementById('btnSubmit').disabled = true; document.getElementById('btnSubmit').innerText = "SENDING...";
+                try {
+                    const type = sleighGame.active ? 'sleigh' : 'catch';
+                    const data = { name, wallet, score, userId: user.uid, timestamp: Date.now() };
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', `leaderboard_${type}`), data);
+                    let total = score + (type === 'sleigh' ? localScores.catch : localScores.sleigh);
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard_overall'), { ...data, score: total });
+                    document.getElementById('submitContainer').classList.add('hidden');
+                    document.getElementById('postSubmitActions').classList.remove('hidden');
+                } catch (e) { alert("FAIL"); document.getElementById('btnSubmit').disabled = false; }
+            }
+        };
+        document.getElementById('btnLeaderboard').addEventListener('click', () => { document.getElementById('leaderboardModal').classList.remove('hidden'); window.lb.switchTab('overall'); });
+        document.getElementById('btnSubmit').addEventListener('click', window.lb.submit);
+    </script>
+</body>
+
+</html>
