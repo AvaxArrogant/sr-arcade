@@ -354,27 +354,9 @@
 
     <!-- LOGIC -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, query, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'saint-richards-arcade';
-        let db, auth, user, isOnline = false;
-
-        if (firebaseConfig) {
-            try {
-                const fApp = initializeApp(firebaseConfig);
-                auth = getAuth(fApp);
-                db = getFirestore(fApp);
-                const initAuth = async () => {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-                    else await signInAnonymously(auth);
-                };
-                initAuth();
-                onAuthStateChanged(auth, (u) => { if (u) { user = u; isOnline = true; } });
-            } catch (e) { console.error("Firebase init failed:", e); }
-        }
+        // Firebase removed in favor of D1 API
+        let isOnline = true;
+        let user = { uid: 'anon_' + Math.random().toString(36).substr(2, 9) };
 
         const audio = {
             enabled: true, ctx: null,
@@ -818,29 +800,63 @@
             fetch: async () => {
                 const list = document.getElementById('lbList');
                 list.innerHTML = '<div class="text-center text-[10px] py-4">LOADING...</div>';
-                if (!isOnline) { list.innerHTML = '<div class="text-center text-red-500 text-[10px] py-4">OFFLINE</div>'; return; }
                 try {
-                    const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', `leaderboard_${window.lb.currentTab}`));
-                    let data = []; snap.forEach(d => data.push(d.data()));
-                    data.sort((a, b) => b.score - a.score);
-                    list.innerHTML = data.slice(0, 50).map((d, i) => `<div class="flex justify-between p-2 border-b border-gray-800 text-[10px]"><span>${i + 1}. ${d.name}</span> <span class="text-pulse-neon">${d.score}</span></div>`).join('');
-                } catch (e) { list.innerHTML = 'ERROR'; }
+                    const response = await fetch('/api/leaderboard/' + window.lb.currentTab);
+                    if (!response.ok) throw new Error('Fetch failed');
+
+                    const data = await response.json();
+                    // Data is already sorted from the API
+
+                    if (data.length === 0) {
+                        list.innerHTML = '<div class="text-center text-gray-500 text-[10px] py-4">NO SCORES YET</div>';
+                        return;
+                    }
+
+                    list.innerHTML = data.map((d, i) => `<div class="flex justify-between p-2 border-b border-gray-800 text-[10px]"><span>${i + 1}. ${d.name}</span> <span class="text-pulse-neon">${d.score}</span></div>`).join('');
+                } catch (e) {
+                    console.error(e);
+                    list.innerHTML = '<div class="text-center text-red-500 text-[10px] py-4">ERROR LOADING</div>';
+                }
             },
             submit: async () => {
                 const name = document.getElementById('playerNameInput').value.trim();
                 const wallet = document.getElementById('walletInput').value.trim();
-                if (!name || !isOnline) { alert("NAME REQ / OFFLINE"); return; }
-                localStorage.setItem('player_name', name); localStorage.setItem('player_wallet', wallet);
-                document.getElementById('btnSubmit').disabled = true; document.getElementById('btnSubmit').innerText = "SENDING...";
+                if (!name) { alert("NAME REQUIRED"); return; }
+
+                localStorage.setItem('player_name', name);
+                localStorage.setItem('player_wallet', wallet);
+
+                document.getElementById('btnSubmit').disabled = true;
+                document.getElementById('btnSubmit').innerText = "SENDING...";
+
                 try {
                     const type = sleighGame.active ? 'sleigh' : 'catch';
-                    const data = { name, wallet, score, userId: user.uid, timestamp: Date.now() };
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', `leaderboard_${type}`), data);
-                    let total = score + (type === 'sleigh' ? localScores.catch : localScores.sleigh);
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard_overall'), { ...data, score: total });
+                    const data = {
+                        name,
+                        wallet,
+                        score,
+                        user_id: user.uid,
+                        game_type: type
+                    };
+
+                    const response = await fetch('/api/leaderboard/submit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Failed to submit: ${response.statusText}`);
+                    }
+
                     document.getElementById('submitContainer').classList.add('hidden');
                     document.getElementById('postSubmitActions').classList.remove('hidden');
-                } catch (e) { alert("FAIL"); document.getElementById('btnSubmit').disabled = false; }
+                } catch (e) {
+                    console.error(e);
+                    alert("SUBMISSION FAILED");
+                    document.getElementById('btnSubmit').disabled = false;
+                    document.getElementById('btnSubmit').innerText = "SUBMIT RECORD";
+                }
             }
         };
         document.getElementById('btnLeaderboard').addEventListener('click', () => { document.getElementById('leaderboardModal').classList.remove('hidden'); window.lb.switchTab('overall'); });
