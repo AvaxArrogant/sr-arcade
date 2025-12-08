@@ -7,9 +7,7 @@
     <title>Saint Richards Arcade - Diamond Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 
     <script>
         tailwind.config = {
@@ -33,6 +31,7 @@
                     },
                     fontFamily: {
                         pixel: ['"Press Start 2P"', 'cursive'],
+                        arcade: ['"VT323"', 'monospace'],
                     }
                 }
             }
@@ -46,7 +45,7 @@
             overflow: hidden;
             touch-action: none;
             user-select: none;
-            font-family: 'Press Start 2P', cursive;
+            font-family: 'VT323', monospace;
         }
 
         .pixel-art {
@@ -99,7 +98,7 @@
             background: #111;
             border: 2px solid #555;
             color: #00ffcc;
-            font-family: 'Press Start 2P', cursive;
+            font-family: 'VT323', monospace;
             padding: 10px;
             width: 100%;
             outline: none;
@@ -143,15 +142,15 @@
     <!-- Zone Indicator (Sleigh Dash) -->
     <div id="zoneIndicator"
         class="hidden absolute top-20 left-1/2 transform -translate-x-1/2 text-center pointer-events-none z-20 transition-opacity duration-1000 opacity-0">
-        <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">ENTERING ZONE</p>
-        <h2 id="zoneTitle" class="text-2xl text-white font-bold zone-text text-shadow">FROSTY PLAINS</h2>
+        <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-1 font-pixel">ENTERING ZONE</p>
+        <h2 id="zoneTitle" class="text-2xl text-white font-bold zone-text text-shadow font-pixel">FROSTY PLAINS</h2>
     </div>
 
     <!-- Level Up Notification -->
     <div id="levelUpNotice"
         class="hidden absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-30">
-        <h2 class="text-4xl text-pulse-neon font-bold zone-text mb-2 animate-bounce">LEVEL UP!</h2>
-        <p id="levelUpNum" class="text-xl text-white">LEVEL 2</p>
+        <h2 class="text-4xl text-pulse-neon font-bold zone-text mb-2 animate-bounce font-pixel">LEVEL UP!</h2>
+        <p id="levelUpNum" class="text-xl text-white font-pixel">LEVEL 2</p>
     </div>
 
     <!-- UI LAYER -->
@@ -163,7 +162,7 @@
                 <div class="flex flex-col gap-1">
                     <div class="flex items-center gap-2">
                         <i class="fas fa-cube text-pulse-neon animate-pulse"></i>
-                        <span class="text-[8px] md:text-[10px] text-pulse-light">SAINT RICHARDS ARCADE</span>
+                        <span class="text-[8px] md:text-[10px] text-pulse-light font-pixel">SAINT RICHARDS ARCADE</span>
                     </div>
                     <div class="flex gap-3 text-[10px] md:text-xs">
                         <span id="scoreDisplay" class="hidden text-white">SCORE: <span
@@ -187,7 +186,18 @@
                 </div>
             </div>
 
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-center">
+                <!-- Music Controls -->
+                <div class="pixel-panel p-2 flex items-center gap-2 bg-black/80 h-full">
+                    <button onclick="audio.toggleMusic()" id="btnMusicMute"
+                        class="text-xs text-pulse-neon hover:text-white w-4">
+                        <i class="fas fa-music"></i>
+                    </button>
+                    <input type="range" id="musicVolume" min="0" max="1" step="0.1" value="0.3"
+                        class="w-16 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-pulse-neon"
+                        oninput="audio.setVolume(this.value)">
+                </div>
+
                 <button onclick="app.toggleSettings()" class="pixel-btn secondary">
                     <i class="fas fa-cog"></i>
                 </button>
@@ -201,10 +211,11 @@
         <div id="mainMenu"
             class="flex-1 flex flex-col items-center justify-center pointer-events-auto transition-opacity duration-300">
             <div class="text-center mb-6 md:mb-10">
-                <h1 class="text-2xl md:text-5xl text-white mb-4 leading-relaxed" style="text-shadow: 4px 4px #9437ff;">
+                <h1 class="text-2xl md:text-5xl text-white mb-4 leading-relaxed font-pixel"
+                    style="text-shadow: 4px 4px #9437ff;">
                     SAINT<br>RICHARDS</h1>
                 <div
-                    class="bg-pulse-neon text-black px-4 py-2 inline-block text-sm md:text-xl font-bold transform -rotate-2 border-2 border-white">
+                    class="bg-pulse-neon text-black px-4 py-2 inline-block text-sm md:text-xl font-bold transform -rotate-2 border-2 border-white font-pixel">
                     ARCADE</div>
             </div>
 
@@ -216,7 +227,7 @@
                         HOT</div>
                     <div class="flex items-center gap-4 mb-2">
                         <i class="fas fa-sleigh text-2xl md:text-3xl text-retro-red"></i>
-                        <h2 class="text-xs md:text-sm text-pulse-neon">SAINT RICHARD'S DASH</h2>
+                        <h2 class="text-xs md:text-sm text-pulse-neon font-pixel">SAINT RICHARD'S DASH</h2>
                     </div>
                     <p class="text-gray-400 text-[8px] md:text-[10px] leading-relaxed">Collect Gifts.<br>Jump Over Low
                         Coal.<br>Speed Ramps Up.</p>
@@ -226,64 +237,78 @@
                     class="pixel-panel p-4 md:p-6 hover:bg-white/10 transition group text-left">
                     <div class="flex items-center gap-4 mb-2">
                         <i class="fas fa-shield-alt text-2xl md:text-3xl text-pulse-main"></i>
-                        <h2 class="text-xs md:text-sm text-pulse-neon">SAINT RICHARD'S CATCH</h2>
+                        <h2 class="text-xs md:text-sm text-pulse-neon font-pixel">SAINT RICHARD'S CATCH</h2>
                     </div>
                     <p class="text-gray-400 text-[8px] md:text-[10px] leading-relaxed">Arcade Reflex.<br>Magnet &
                         Shield.<br>Don't Hit Coal.</p>
                 </button>
             </div>
+
+            <!-- SOCIAL LINKS -->
+            <div class="mt-8 flex gap-4 justify-center">
+                <a href="https://x.com/SaintRichardPLS" target="_blank"
+                    class="pixel-btn bg-black hover:bg-gray-900 border-gray-600 text-white flex items-center gap-2 text-sm">
+                    <i class="fa-brands fa-x-twitter"></i> <span>@SaintRichardPLS</span>
+                </a>
+                <a href="https://t.me/SaintRichardOfPulseChain" target="_blank"
+                    class="pixel-btn bg-[#24A1DE] hover:bg-[#1c8dbf] border-white text-white flex items-center gap-2 text-sm">
+                    <i class="fa-brands fa-telegram"></i> <span>TELEGRAM</span>
+                </a>
+            </div>
         </div>
+        </button>
+    </div>
+    </div>
 
-        <!-- GAME OVER SCREEN -->
-        <div id="gameOverScreen"
-            class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/90 pointer-events-auto p-4">
-            <div class="pixel-panel p-6 w-full max-w-md text-center border-retro-red">
-                <h2 class="text-xl md:text-2xl text-retro-red mb-4">GAME OVER</h2>
-                <div id="gameOverReason" class="text-[10px] text-gray-400 mb-4 uppercase tracking-widest">CRASHED</div>
+    <!-- GAME OVER SCREEN -->
+    <div id="gameOverScreen"
+        class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/90 pointer-events-auto p-4">
+        <div class="pixel-panel p-6 w-full max-w-md text-center border-retro-red">
+            <h2 class="text-xl md:text-2xl text-retro-red mb-4">GAME OVER</h2>
+            <div id="gameOverReason" class="text-[10px] text-gray-400 mb-4 uppercase tracking-widest">CRASHED</div>
 
-                <div class="mb-6 border-b-2 border-gray-800 pb-4">
-                    <div class="flex justify-between px-8">
-                        <div class="text-center">
-                            <p class="text-[8px] text-gray-500 mb-1">SCORE</p>
-                            <p id="finalScoreVal" class="text-2xl text-pulse-neon">0</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-[8px] text-gray-500 mb-1">LEVEL</p>
-                            <p id="finalLevelVal" class="text-2xl text-retro-yellow">1</p>
-                        </div>
+            <div class="mb-6 border-b-2 border-gray-800 pb-4">
+                <div class="flex justify-between px-8">
+                    <div class="text-center">
+                        <p class="text-[8px] text-gray-500 mb-1">SCORE</p>
+                        <p id="finalScoreVal" class="text-2xl text-pulse-neon">0</p>
                     </div>
-                </div>
-
-                <div id="submitContainer" class="space-y-4 text-left">
-                    <div>
-                        <label class="text-[8px] text-gray-400 block mb-1">PILOT NAME</label>
-                        <input type="text" id="playerNameInput" maxlength="12" placeholder="PLAYER 1"
-                            class="pixel-input">
-                    </div>
-                    <div>
-                        <label class="text-[8px] text-gray-400 block mb-1">PRIZE WALLET (0x...)</label>
-                        <input type="text" id="walletInput" placeholder="0x..." class="pixel-input">
-                        <div id="walletTooltip" class="hidden text-[8px] text-retro-yellow mt-1 animate-pulse">
-                            <i class="fas fa-exclamation-circle"></i> ADDRESS REQUIRED FOR PRIZES
-                        </div>
-                    </div>
-
-                    <button id="btnSubmit" class="pixel-btn w-full mt-2">
-                        SUBMIT RECORD
-                    </button>
-                </div>
-
-                <div id="postSubmitActions" class="hidden space-y-4 pt-2">
-                    <div class="bg-green-900/50 border border-green-500 text-green-400 p-3 text-[10px]">
-                        <i class="fas fa-check"></i> DATA UPLOADED
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="app.returnToMenu()" class="pixel-btn secondary flex-1">MENU</button>
-                        <button onclick="app.restartGame()" class="pixel-btn flex-1">RETRY</button>
+                    <div class="text-center">
+                        <p class="text-[8px] text-gray-500 mb-1">LEVEL</p>
+                        <p id="finalLevelVal" class="text-2xl text-retro-yellow">1</p>
                     </div>
                 </div>
             </div>
+
+            <div id="submitContainer" class="space-y-4 text-left">
+                <div>
+                    <label class="text-[8px] text-gray-400 block mb-1">PILOT NAME</label>
+                    <input type="text" id="playerNameInput" maxlength="12" placeholder="PLAYER 1" class="pixel-input">
+                </div>
+                <div>
+                    <label class="text-[8px] text-gray-400 block mb-1">PRIZE WALLET (0x...)</label>
+                    <input type="text" id="walletInput" placeholder="0x..." class="pixel-input">
+                    <div id="walletTooltip" class="hidden text-[8px] text-retro-yellow mt-1 animate-pulse">
+                        <i class="fas fa-exclamation-circle"></i> ADDRESS REQUIRED FOR PRIZES
+                    </div>
+                </div>
+
+                <button id="btnSubmit" class="pixel-btn w-full mt-2">
+                    SUBMIT RECORD
+                </button>
+            </div>
+
+            <div id="postSubmitActions" class="hidden space-y-4 pt-2">
+                <div class="bg-green-900/50 border border-green-500 text-green-400 p-3 text-[10px]">
+                    <i class="fas fa-check"></i> DATA UPLOADED
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="app.returnToMenu()" class="pixel-btn secondary flex-1">MENU</button>
+                    <button onclick="app.restartGame()" class="pixel-btn flex-1">RETRY</button>
+                </div>
+            </div>
         </div>
+    </div>
     </div>
 
     <!-- LEADERBOARD MODAL -->
@@ -299,13 +324,13 @@
             </div>
             <div class="flex border-b-4 border-white bg-gray-900">
                 <button onclick="lb.switchTab('overall')"
-                    class="lb-tab flex-1 py-3 text-[10px] hover:bg-gray-800 text-gray-400"
+                    class="lb-tab flex-1 py-3 text-[10px] hover:bg-gray-800 text-gray-400 border-b-4 border-transparent transition-colors"
                     data-tab="overall">OVERALL</button>
                 <button onclick="lb.switchTab('sleigh')"
-                    class="lb-tab flex-1 py-3 text-[10px] hover:bg-gray-800 text-gray-400"
+                    class="lb-tab flex-1 py-3 text-[10px] hover:bg-gray-800 text-gray-400 border-b-4 border-transparent transition-colors"
                     data-tab="sleigh">DASH</button>
                 <button onclick="lb.switchTab('catch')"
-                    class="lb-tab flex-1 py-3 text-[10px] hover:bg-gray-800 text-gray-400"
+                    class="lb-tab flex-1 py-3 text-[10px] hover:bg-gray-800 text-gray-400 border-b-4 border-transparent transition-colors"
                     data-tab="catch">CATCH</button>
             </div>
             <div class="flex-1 overflow-y-auto p-4 bg-black">
@@ -363,12 +388,45 @@
 
         const audio = {
             enabled: true, ctx: null,
-            init: () => { if (!audio.ctx) audio.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+            bgm: { sleigh: new Audio('assets/bgm_dance.mp3'), catch: new Audio('assets/bgm_club.wav'), current: null },
+            init: () => {
+                if (!audio.ctx) audio.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                audio.bgm.sleigh.loop = true;
+                audio.bgm.catch.loop = true;
+                audio.setVolume(0.3);
+            },
             toggle: () => {
                 audio.enabled = !audio.enabled;
                 const btn = document.getElementById('btnToggleSound');
                 btn.innerText = audio.enabled ? "ON" : "OFF";
                 btn.style.backgroundColor = audio.enabled ? "#9437ff" : "transparent";
+            },
+            toggleMusic: () => {
+                const btn = document.getElementById('btnMusicMute');
+                if (audio.bgm.current && !audio.bgm.current.paused) {
+                    audio.bgm.current.pause();
+                    btn.innerHTML = '<i class="fas fa-volume-mute text-gray-500"></i>';
+                } else if (audio.bgm.current) {
+                    audio.bgm.current.play();
+                    btn.innerHTML = '<i class="fas fa-music"></i>';
+                }
+            },
+            setVolume: (val) => {
+                audio.bgm.sleigh.volume = val;
+                audio.bgm.catch.volume = val;
+            },
+            playMusic: (type) => {
+                if (audio.bgm.current) audio.bgm.current.pause();
+                audio.bgm.current = type === 'SLEIGH' ? audio.bgm.sleigh : audio.bgm.catch;
+                audio.bgm.current.currentTime = 0;
+                audio.bgm.current.play().catch(e => console.log("Autoplay blocked", e));
+                document.getElementById('btnMusicMute').innerHTML = '<i class="fas fa-music"></i>';
+            },
+            stopMusic: () => {
+                if (audio.bgm.current) {
+                    audio.bgm.current.pause();
+                    audio.bgm.current.currentTime = 0;
+                }
             },
             play: (freq, type, dur) => {
                 if (!audio.enabled || !audio.ctx) return;
@@ -456,6 +514,8 @@
                 document.getElementById('scoreDisplay').querySelector('span').innerText = '0';
                 document.getElementById('levelDisplay').querySelector('span').innerText = '1';
 
+                audio.playMusic(type); // Start Music
+
                 if (type === 'SLEIGH') {
                     currentState = STATE.PLAYING_SLEIGH;
                     gameSpeed = 5;
@@ -485,6 +545,7 @@
             gameOver: (reason = "CRASHED") => {
                 if (currentState === STATE.GAMEOVER) return;
                 // Note: audio.explode() is called by createExplosion before calling this
+                audio.stopMusic(); // Stop Music
                 currentState = STATE.GAMEOVER;
                 document.getElementById('gameOverScreen').classList.remove('hidden');
                 document.getElementById('finalScoreVal').innerText = score;
@@ -503,7 +564,10 @@
             },
 
             restartGame: () => { document.getElementById('gameOverScreen').classList.add('hidden'); if (sleighGame.active) app.launchGame('SLEIGH'); else app.launchGame('CATCH'); },
-            returnToMenu: () => { currentState = STATE.MENU; document.getElementById('gameOverScreen').classList.add('hidden'); document.getElementById('mainMenu').classList.remove('hidden'); document.getElementById('scoreDisplay').classList.add('hidden'); document.getElementById('levelDisplay').classList.add('hidden'); document.getElementById('coalTracker').classList.add('hidden'); }
+            returnToMenu: () => {
+                audio.stopMusic(); // Stop Music
+                currentState = STATE.MENU; document.getElementById('gameOverScreen').classList.add('hidden'); document.getElementById('mainMenu').classList.remove('hidden'); document.getElementById('scoreDisplay').classList.add('hidden'); document.getElementById('levelDisplay').classList.add('hidden'); document.getElementById('coalTracker').classList.add('hidden');
+            }
         };
 
         window.app = app;
@@ -544,17 +608,36 @@
             drawPixelRect(x + size / 2 - 2, y + 4, 4, size - 8, '#fff'); drawPixelRect(x + 4, y + size / 3, size - 8, 4, '#fff');
         }
 
+        // --- ASSETS ---
+        const sprites = {
+            santa: new Image(),
+            sack: new Image(),
+            sackFull: new Image()
+        };
+        sprites.santa.src = 'assets/rh-santa.png';
+        sprites.sack.src = 'assets/sack.png';
+        sprites.sackFull.src = 'assets/sack-with-presents.png';
+
         function drawSantaSprite(x, y, scale = 1, isSleigh = false) {
-            ctx.save(); ctx.translate(Math.floor(x), Math.floor(y)); ctx.scale(scale, scale);
+            ctx.save();
+            ctx.translate(Math.floor(x), Math.floor(y));
+            ctx.scale(scale, scale);
+
             if (isSleigh) {
-                drawPixelRect(0, 10, 40, 10, '#8B4513'); drawPixelRect(0, 20, 40, 2, '#FFD700');
-                drawPixelRect(10, 0, 15, 15, '#ff0055'); drawPixelRect(15, -5, 5, 5, '#ff0055');
-                drawPixelRect(20, -5, 3, 3, '#fff'); drawPixelRect(22, 2, 6, 4, '#fff');
-                drawPixelRect(-2, 12, 4, 4, '#00ffcc');
+                // Sleigh Game - RH Santa
+                if (sprites.santa.complete) {
+                    ctx.drawImage(sprites.santa, -25, -25, 50, 50);
+                } else {
+                    drawPixelRect(0, 10, 40, 10, '#8B4513'); // Fallback
+                }
             } else {
-                drawPixelRect(-10, -20, 20, 30, '#ff0055'); drawPixelRect(-5, -25, 10, 10, '#ff0055');
-                drawPixelRect(-2, -28, 4, 4, '#fff'); drawPixelRect(-8, -10, 16, 4, '#000');
-                drawPixelRect(-8, -10, 4, 4, '#FFD700'); drawPixelRect(-6, -18, 12, 4, '#00ffcc');
+                // Catch Game - Sack
+                let img = (score > 50) ? sprites.sackFull : sprites.sack;
+                if (img.complete) {
+                    ctx.drawImage(img, -25, -35, 60, 60);
+                } else {
+                    drawPixelRect(-10, -20, 20, 30, '#8B4513'); // Fallback
+                }
             }
             ctx.restore();
         }
@@ -738,8 +821,8 @@
 
             drawEntities: () => {
                 drawSantaSprite(catchGame.playerX, canvas.height - 50, 1.5, false);
-                if (catchGame.magnetMode) { ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(catchGame.playerX, canvas.height - 35, 60, 0, Math.PI * 2); ctx.stroke(); }
-                if (catchGame.shieldActive) { ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(catchGame.playerX, canvas.height - 35, 50, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = 'rgba(6, 182, 212, 0.1)'; ctx.fill(); }
+                if (catchGame.magnetMode) { ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(catchGame.playerX, canvas.height - 65, 60, 0, Math.PI * 2); ctx.stroke(); }
+                if (catchGame.shieldActive) { ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(catchGame.playerX, canvas.height - 65, 55, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = 'rgba(6, 182, 212, 0.1)'; ctx.fill(); }
 
                 for (let i = catchGame.items.length - 1; i >= 0; i--) {
                     let item = catchGame.items[i]; item.y += item.vy;
@@ -815,7 +898,14 @@
             currentTab: 'overall',
             switchTab: (tab) => {
                 window.lb.currentTab = tab;
-                document.querySelectorAll('.lb-tab').forEach(b => { b.classList.remove('text-white', 'border-white'); b.classList.add('text-gray-400', 'border-transparent'); if (b.dataset.tab === tab) { b.classList.add('text-white', 'border-white'); b.classList.remove('text-gray-400', 'border-transparent'); } });
+                document.querySelectorAll('.lb-tab').forEach(b => {
+                    b.classList.remove('text-white', 'border-retro-yellow', 'bg-gray-800');
+                    b.classList.add('text-gray-400', 'border-transparent');
+                    if (b.dataset.tab === tab) {
+                        b.classList.add('text-white', 'border-retro-yellow', 'bg-gray-800');
+                        b.classList.remove('text-gray-400', 'border-transparent');
+                    }
+                });
                 window.lb.fetch();
             },
             fetch: async () => {
