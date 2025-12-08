@@ -81,6 +81,18 @@
         .pixel-table tr:hover {
             background-color: #1a1a1a;
         }
+
+        .pixel-btn.secondary {
+            background-color: #333;
+            border-color: #666;
+            color: #aaa;
+            box-shadow: none;
+        }
+
+        .pixel-btn.secondary:hover {
+            background-color: #444;
+            color: #fff;
+        }
     </style>
 </head>
 
@@ -105,7 +117,13 @@
                 <h1 class="text-2xl text-pulse-neon mb-2">COMMAND CENTER</h1>
                 <p class="text-xs text-gray-400">SAINT RICHARDS ARCADE // DIAMOND TIER</p>
             </div>
-            <button onclick="location.reload()" class="pixel-btn bg-red-600">LOGOUT</button>
+            <div class="flex gap-4">
+                <button onclick="admin.clearLeaderboard()"
+                    class="pixel-btn bg-red-900 border-red-500 text-red-200 hover:bg-red-800">
+                    <i class="fas fa-trash"></i> WIPE DATA
+                </button>
+                <button onclick="location.reload()" class="pixel-btn bg-gray-800">LOGOUT</button>
+            </div>
         </div>
 
         <!-- STATS GRID -->
@@ -132,8 +150,14 @@
         <div class="pixel-panel p-6">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-lg text-white">GLOBAL LEADERBOARD</h2>
-                <button onclick="admin.fetchLeaderboard()" class="text-xs text-pulse-neon hover:underline"><i
-                        class="fas fa-sync"></i> REFRESH</button>
+                <div class="flex gap-2">
+                    <button onclick="admin.switchTab('sleigh')" id="tab-sleigh"
+                        class="pixel-btn text-[10px] py-2">DASH</button>
+                    <button onclick="admin.switchTab('catch')" id="tab-catch"
+                        class="pixel-btn secondary text-[10px] py-2">CATCH</button>
+                    <button onclick="admin.fetchLeaderboard()" class="text-xs text-pulse-neon hover:underline ml-4"><i
+                            class="fas fa-sync"></i> REFRESH</button>
+                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full pixel-table">
@@ -193,6 +217,7 @@
     <script>
         const API_BASE = '/api/admin';
         let authToken = '';
+        let currentTab = 'sleigh';
 
         const admin = {
             login: async () => {
@@ -221,6 +246,14 @@
 
             loadDashboard: () => {
                 admin.fetchStats();
+                admin.switchTab('sleigh');
+            },
+
+            switchTab: (tab) => {
+                currentTab = tab;
+                // Update UI
+                document.getElementById('tab-sleigh').className = tab === 'sleigh' ? 'pixel-btn text-[10px] py-2' : 'pixel-btn secondary text-[10px] py-2';
+                document.getElementById('tab-catch').className = tab === 'catch' ? 'pixel-btn text-[10px] py-2' : 'pixel-btn secondary text-[10px] py-2';
                 admin.fetchLeaderboard();
             },
 
@@ -237,7 +270,7 @@
                 const tbody = document.getElementById('lbTableBody');
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">LOADING DATA...</td></tr>';
 
-                const res = await fetch(`${API_BASE}/leaderboard`, { headers: { 'x-admin-password': authToken } });
+                const res = await fetch(`${API_BASE}/leaderboard?type=${currentTab}`, { headers: { 'x-admin-password': authToken } });
                 const data = await res.json();
 
                 if (data.length === 0) {
@@ -279,6 +312,22 @@
                         <td class="text-gray-400">${row.name}</td>
                     </tr>
                 `).join('');
+            },
+
+            clearLeaderboard: async () => {
+                if (!confirm("WARNING: THIS WILL DELETE ALL LEADERBOARD DATA PERMANENTLY.\n\nAre you sure you want to proceed?")) return;
+
+                const res = await fetch(`${API_BASE}/leaderboard`, {
+                    method: 'DELETE',
+                    headers: { 'x-admin-password': authToken }
+                });
+
+                if (res.ok) {
+                    alert("Leaderboard cleared successfully.");
+                    admin.loadDashboard();
+                } else {
+                    alert("Failed to clear leaderboard.");
+                }
             }
         };
 
